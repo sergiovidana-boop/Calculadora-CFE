@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora CFE</title>
+    <!-- Configuración PWA (Para instalar en celular) -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#047857">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/869/869869.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 font-sans p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto space-y-6">
+        
+        <!-- Encabezado -->
+        <div class="bg-emerald-700 text-white rounded-2xl p-6 shadow-lg flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-solar-panel"></i> Calculadora CFE Bidireccional
+                </h1>
+                <p class="text-emerald-100 text-sm mt-1">Cálculo de consumo y balance neto para paneles solares</p>
+            </div>
+            <button onclick="cargarEjemploRecibo()" class="bg-emerald-500 hover:bg-emerald-400 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all shadow border border-emerald-400 flex items-center gap-2">
+                <i class="fa-solid fa-file-invoice-dollar"></i> Cargar Datos de Tu Recibo
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+            <!-- Panel de Datos de Entrada -->
+            <div class="md:col-span-2 space-y-6">
+
+                <!-- Configuracion General -->
+                <div class="bg-white rounded-2xl p-6 shadow-md border border-slate-200">
+                    <h2 class="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-emerald-600"></i> Configuración de Tarifa
+                    </h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Tarifa CFE</label>
+                            <select id="tarifa" onchange="calcular()" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none">
+                                <option value="1C" selected>Tarifa 1C (Cálida)</option>
+                                <option value="1">Tarifa 01 (Estándar)</option>
+                                <option value="PDBT">PDBT (Comercial Pequeña)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Periodo</label>
+                            <select id="periodo" onchange="calcular()" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm font-semibold focus:ring-2 focus:ring-emerald-500 outline-none">
+                                <option value="2" selected>Bimestral (Residencial)</option>
+                                <option value="1">Mensual</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lecturas del Medidor Bidireccional -->
+                <div class="bg-white rounded-2xl p-6 shadow-md border border-slate-200">
+                    <h2 class="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-gauge-high text-emerald-600"></i> Lecturas del Medidor
+                    </h2>
+
+                    <!-- 1.8.0 Consumido -->
+                    <div class="mb-6 p-4 bg-red-50 rounded-xl border border-red-100">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-bold text-red-800 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-arrow-down text-red-600"></i> 1.8.0 - Energía Consumida
+                            </span>
+                            <span id="txt-consumo-total" class="text-sm font-bold text-red-700">0 kWh</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-xs text-slate-500 font-semibold">Lectura Anterior</label>
+                                <input type="number" id="cons-anterior" value="8428" oninput="calcular()" class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm font-semibold">
+                            </div>
+                            <div>
+                                <label class="text-xs text-slate-500 font-semibold">Lectura Actual</label>
+                                <input type="number" id="cons-actual" value="9508" oninput="calcular()" class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm font-semibold">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2.8.0 Inyectado -->
+                    <div class="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-bold text-emerald-800 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-arrow-up text-emerald-600"></i> 2.8.0 - Energía Inyectada
+                            </span>
+                            <span id="txt-inyectado-total" class="text-sm font-bold text-emerald-700">0 kWh</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-xs text-slate-500 font-semibold">Lectura Anterior</label>
+                                <input type="number" id="inyec-anterior" value="6859" oninput="calcular()" class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm font-semibold">
+                            </div>
+                            <div>
+                                <label class="text-xs text-slate-500 font-semibold">Lectura Actual</label>
+                                <input type="number" id="inyec-actual" value="7547" oninput="calcular()" class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm font-semibold">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ajustes -->
+                    <div class="mt-4 grid grid-cols-2 gap-3 pt-2">
+                        <div>
+                            <label class="text-xs text-slate-500 font-semibold">Adeudo Anterior ($)</label>
+                            <input type="number" id="adeudo-anterior" value="139.19" oninput="calcular()" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-sm font-semibold">
+                        </div>
+                        <div>
+                            <label class="text-xs text-slate-500 font-semibold">Su Pago / Crédito ($)</label>
+                            <input type="number" id="su-pago" value="139.00" oninput="calcular()" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-sm font-semibold">
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Panel de Resultados -->
+            <div class="space-y-6">
+
+                <!-- Balance Neto -->
+                <div class="bg-slate-900 text-white rounded-2xl p-6 shadow-md relative overflow-hidden">
+                    <h3 class="text-xs font-bold tracking-widest text-slate-400 uppercase mb-2">Balance Neto</h3>
+                    <div class="text-3xl font-extrabold text-emerald-400 mb-1" id="txt-balance-neto">0 kWh</div>
+                    <p class="text-xs text-slate-300" id="txt-balance-desc">Energía neta facturable</p>
+
+                    <div class="mt-4 pt-4 border-t border-slate-800 space-y-2 text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Energía Consumida:</span>
+                            <span class="font-bold text-red-400" id="res-consumida">0 kWh</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Energía Inyectada:</span>
+                            <span class="font-bold text-emerald-400" id="res-inyectada">0 kWh</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Desglose -->
+                <div class="bg-white rounded-2xl p-6 shadow-md border border-slate-200">
+                    <h3 class="text-md font-bold text-slate-700 mb-4 pb-2 border-b border-slate-100 flex items-center justify-between">
+                        <span>Desglose de Pago</span>
+                        <i class="fa-solid fa-receipt text-slate-400"></i>
+                    </h3>
+
+                    <div class="space-y-2 text-sm">
+                        <div id="contenedor-escalones" class="space-y-1 text-xs text-slate-600 pb-2 border-b border-slate-100"></div>
+
+                        <div class="flex justify-between text-slate-700 pt-1">
+                            <span>Subtotal Energía:</span>
+                            <span class="font-semibold" id="txt-subtotal-energia">$0.00</span>
+                        </div>
+
+                        <div class="flex justify-between text-slate-700">
+                            <span>IVA (16%):</span>
+                            <span class="font-semibold" id="txt-iva">$0.00</span>
+                        </div>
+
+                        <div class="flex justify-between text-slate-700 text-xs">
+                            <span class="text-slate-500">Ajuste / Adeudos:</span>
+                            <span id="txt-ajustes">$0.00</span>
+                        </div>
+
+                        <div class="pt-3 border-t border-slate-200 flex justify-between items-center">
+                            <span class="font-bold text-slate-800">Total a Pagar:</span>
+                            <span class="text-xl font-extrabold text-emerald-600" id="txt-total-pagar">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráfica -->
+                <div class="bg-white rounded-2xl p-4 shadow-md border border-slate-200">
+                    <canvas id="graficaConsumo" height="180"></canvas>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        let miGrafica;
+
+        function cargarEjemploRecibo() {
+            document.getElementById('cons-anterior').value = 8428;
+            document.getElementById('cons-actual').value = 9508;
+            document.getElementById('inyec-anterior').value = 6859;
+            document.getElementById('inyec-actual').value = 7547;
+            document.getElementById('adeudo-anterior').value = 139.19;
+            document.getElementById('su-pago').value = 139.00;
+            document.getElementById('tarifa').value = '1C';
+            calcular();
+        }
+
+        function calcular() {
+            const consAnt = parseFloat(document.getElementById('cons-anterior').value) || 0;
+            const consAct = parseFloat(document.getElementById('cons-actual').value) || 0;
+            const totalConsumido = Math.max(0, consAct - consAnt);
+
+            const inyecAnt = parseFloat(document.getElementById('inyec-anterior').value) || 0;
+            const inyecAct = parseFloat(document.getElementById('inyec-actual').value) || 0;
+            const totalInyectado = Math.max(0, inyecAct - inyecAnt);
+
+            const balanceNeto = totalConsumido - totalInyectado;
+            const kwhFacturables = Math.max(0, balanceNeto);
+            const bolsaEnergia = balanceNeto < 0 ? Math.abs(balanceNeto) : 0;
+
+            document.getElementById('txt-consumo-total').innerText = `${totalConsumido.toLocaleString()} kWh`;
+            document.getElementById('txt-inyectado-total').innerText = `${totalInyectado.toLocaleString()} kWh`;
+            document.getElementById('res-consumida').innerText = `${totalConsumido.toLocaleString()} kWh`;
+            document.getElementById('res-inyectada').innerText = `${totalInyectado.toLocaleString()} kWh`;
+
+            if (balanceNeto >= 0) {
+                document.getElementById('txt-balance-neto').innerText = `${kwhFacturables.toLocaleString()} kWh`;
+                document.getElementById('txt-balance-desc').innerText = 'Energía neta facturable';
+            } else {
+                document.getElementById('txt-balance-neto').innerText = `-${bolsaEnergia.toLocaleString()} kWh`;
+                document.getElementById('txt-balance-desc').innerText = 'A favor en Bolsa de Energía';
+            }
+
+            let subtotalEnergia = 0;
+            let desgloseHTML = '';
+
+            const limiteBasico = 300;
+            const precioBasico = 1.013;
+            const precioIntermedio = 1.175;
+
+            if (kwhFacturables > 0) {
+                const basicoKwh = Math.min(kwhFacturables, limiteBasico);
+                const intermedioKwh = Math.max(0, kwhFacturables - limiteBasico);
+
+                const costoBasico = basicoKwh * precioBasico;
+                const costoIntermedio = intermedioKwh * precioIntermedio;
+
+                subtotalEnergia = costoBasico + costoIntermedio;
+
+                desgloseHTML += `<div class="flex justify-between"><span>Básico (${basicoKwh} kWh x $${precioBasico}):</span> <span>$${costoBasico.toFixed(2)}</span></div>`;
+                if (intermedioKwh > 0) {
+                    desgloseHTML += `<div class="flex justify-between"><span>Intermedio (${intermedioKwh} kWh x $${precioIntermedio}):</span> <span>$${costoIntermedio.toFixed(2)}</span></div>`;
+                }
+            } else {
+                desgloseHTML = '<div class="text-emerald-600 font-semibold">Generación solar cubrió el 100% del consumo.</div>';
+            }
+
+            document.getElementById('contenedor-escalones').innerHTML = desgloseHTML;
+
+            const iva = subtotalEnergia * 0.16;
+            const adeudoAnterior = parseFloat(document.getElementById('adeudo-anterior').value) || 0;
+            const suPago = parseFloat(document.getElementById('su-pago').value) || 0;
+            const ajusteNeto = adeudoAnterior - suPago;
+
+            const totalPagar = subtotalEnergia + iva + ajusteNeto;
+
+            document.getElementById('txt-subtotal-energia').innerText = `$${subtotalEnergia.toFixed(2)}`;
+            document.getElementById('txt-iva').innerText = `$${iva.toFixed(2)}`;
+            document.getElementById('txt-ajustes').innerText = `$${ajusteNeto.toFixed(2)}`;
+            document.getElementById('txt-total-pagar').innerText = `$${Math.max(0, totalPagar).toFixed(2)}`;
+
+            actualizarGrafica(totalConsumido, totalInyectado, kwhFacturables);
+        }
+
+        function actualizarGrafica(consumido, inyectado, facturable) {
+            const ctx = document.getElementById('graficaConsumo').getContext('2d');
+            if (miGrafica) miGrafica.destroy();
+
+            miGrafica = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Consumido', 'Inyectado', 'Facturable'],
+                    datasets: [{
+                        data: [consumido, inyectado, facturable],
+                        backgroundColor: ['#ef4444', '#10b981', '#3b82f6'],
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        cargarEjemploRecibo();
+
+        // Registro para PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(() => {});
+        }
+    </script>
+</body>
+</html>
